@@ -3,7 +3,7 @@
 A [Lean(4) Theorem Prover](https://lean-lang.org/) extension for [Zed](https://zed.dev).
 
 - Tree-sitter: [tree-sitter-lean](https://github.com/Julian/tree-sitter-lean)
-- Language Server: [Lean Language Server](https://github.com/leanprover/lean4/tree/master/src/Lean/Server)
+- Language Servers: [Lean Language Server](https://github.com/leanprover/lean4/tree/master/src/Lean/Server) and [`lean-fmt`](https://github.com/jcreinhold/lean-fmt)
 
 ## Lean Toolchain
 
@@ -30,6 +30,7 @@ lean --version
 - If Lean 4 is not detected, this extension can automatically install elan with default toolchain. To enable this feature, you must set `"elan_auto_install"` to `true`. You can also specify the default toolchain by setting `"elan_default_toolchain"` to `"stable"`, `"nightly"` or `"v4.28.0"`.
 - During installation, the extension will automatically add `~/.elan` to your $PATH. The Lean toolchain can be completely removed by running `elan self uninstall`.
 - If the Zed worktree is a parent directory of a Lean project, set `lsp.lean4-lsp.settings.lake_project_dir` to the directory containing that project's `lakefile.toml` (or `lakefile.lean`). Relative paths are resolved from the worktree root. This starts an automatically detected Lake with `--dir` so project dependencies such as Mathlib are available. A configured `lsp.lean4-lsp.binary` takes precedence; for that case, include `"--dir", "/path/to/project"` before `"serve"` in `binary.arguments`.
+- `lean-fmt` runs alongside the Lean language server when it is declared in the project's Lakefile. The extension starts it as `lake --dir <project> exe lean-fmt lsp --root <project>`. Its settings, including `lake_project_dir` and initialization options, belong under `lsp.lean-fmt`.
 
 ## settings.json Sample
 
@@ -53,12 +54,17 @@ lean --version
 
 ### Nested Lake project
 
-When the extension detects `lake` automatically, configure the nested project relative to the worktree root:
+When the extension detects `lake` automatically, configure the nested project relative to the worktree root. Configure the same path under `lsp.lean-fmt.settings` when using `lean-fmt`:
 
 ```json
 {
   "lsp": {
     "lean4-lsp": {
+      "settings": {
+        "lake_project_dir": "formalization"
+      }
+    },
+    "lean-fmt": {
       "settings": {
         "lake_project_dir": "formalization"
       }

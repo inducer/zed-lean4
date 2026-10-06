@@ -1,26 +1,47 @@
 use std::{env, fs, path::PathBuf};
 use zed_extension_api::{self as zed, Result, serde_json::Value, settings::LspSettings};
 
-fn lake_server_args(lsp_settings: &LspSettings, worktree: &zed::Worktree) -> Vec<String> {
-    let mut args = Vec::new();
-
-    if let Some(project_dir) = lsp_settings
+fn lake_project_dir(lsp_settings: &LspSettings, worktree: &zed::Worktree) -> Option<PathBuf> {
+    lsp_settings
         .settings
         .as_ref()
         .and_then(|settings| settings.pointer("/lake_project_dir"))
         .and_then(Value::as_str)
-    {
-        let project_dir = PathBuf::from(project_dir);
-        let project_dir = if project_dir.is_absolute() {
-            project_dir
-        } else {
-            PathBuf::from(worktree.root_path()).join(project_dir)
-        };
+        .map(PathBuf::from)
+        .map(|project_dir| {
+            if project_dir.is_absolute() {
+                project_dir
+            } else {
+                PathBuf::from(worktree.root_path()).join(project_dir)
+            }
+        })
+}
+
+fn lake_server_args(lsp_settings: &LspSettings, worktree: &zed::Worktree) -> Vec<String> {
+    let mut args = Vec::new();
+
+    if let Some(project_dir) = lake_project_dir(lsp_settings, worktree) {
         args.extend(["--dir".into(), project_dir.to_string_lossy().into_owned()]);
     }
 
     args.extend(["serve".into(), "--".into()]);
     args
+}
+
+fn lean_fmt_args(lsp_settings: &LspSettings, worktree: &zed::Worktree) -> Vec<String> {
+    let project_dir = lake_project_dir(lsp_settings, worktree)
+        .unwrap_or_else(|| PathBuf::from(worktree.root_path()));
+    let project_dir = project_dir.to_string_lossy().into_owned();
+
+    vec![
+        "--dir".into(),
+        project_dir.clone(),
+        "exe".into(),
+        "lean-fmt".into(),
+        "lsp".into(),
+        "--root".into(),
+        project_dir,
+    ]
 }
 
 struct Lean4Extension;
@@ -37,7 +58,10 @@ impl zed::Extension for Lean4Extension {
     ) -> Result<zed::Command> {
         let shell_env = worktree.shell_env();
         let lsp_settings = LspSettings::for_worktree(language_server_id.as_ref(), worktree)?;
-        let lake_args = lake_server_args(&lsp_settings, worktree);
+        let lake_args = match language_server_id.as_ref() {
+            "lean-fmt" => lean_fmt_args(&lsp_settings, worktree),
+            _ => lake_server_args(&lsp_settings, worktree),
+        };
 
         // Check lsp.lean4-lsp.binary
         if let Some(binary) = lsp_settings.binary

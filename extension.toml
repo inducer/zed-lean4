@@ -11,6 +11,10 @@ snippets = "snippets/lean 4.json"
 name = "Lean4 Language Server"
 languages = ["Lean 4"]
 
+[language_servers.lean-fmt]
+name = "lean-fmt"
+languages = ["Lean 4"]
+
 [grammars.lean]
 repository = "https://github.com/Julian/tree-sitter-lean"
 rev = "efe6b87145608d12f5996bd7f0cf6095a0e82261"
